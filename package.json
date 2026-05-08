@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
+    "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "NODE_ENV=production tsx server/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
