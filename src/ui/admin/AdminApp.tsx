@@ -20,8 +20,10 @@ export const AdminApp = () => {
   const [charts, setCharts] = useState<Chart[]>([]);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [name, setName] = useState("");
-  const [xAxisName, setXAxisName] = useState("Lawful / Chaotic");
-  const [yAxisName, setYAxisName] = useState("Good / Evil");
+  const [xAxisMinLabel, setXAxisMinLabel] = useState("Evil");
+  const [xAxisMaxLabel, setXAxisMaxLabel] = useState("Good");
+  const [yAxisMinLabel, setYAxisMinLabel] = useState("Chaotic");
+  const [yAxisMaxLabel, setYAxisMaxLabel] = useState("Lawful");
   const [images, setImages] = useState<DraftImage[]>([]);
   const [selectedChartId, setSelectedChartId] = useState("");
 
@@ -126,8 +128,10 @@ export const AdminApp = () => {
       method: "POST",
       body: JSON.stringify({
         name,
-        xAxisName,
-        yAxisName,
+        xAxisMinLabel,
+        xAxisMaxLabel,
+        yAxisMinLabel,
+        yAxisMaxLabel,
         images: uploadedImages
       })
     });
@@ -193,14 +197,24 @@ export const AdminApp = () => {
           Name
           <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Office Objects" />
         </label>
-        <label>
-          X axis
-          <input value={xAxisName} onChange={(event) => setXAxisName(event.target.value)} />
-        </label>
-        <label>
-          Y axis
-          <input value={yAxisName} onChange={(event) => setYAxisName(event.target.value)} />
-        </label>
+        <div className="axis-form-grid">
+          <label>
+            X minimum
+            <input value={xAxisMinLabel} onChange={(event) => setXAxisMinLabel(event.target.value)} />
+          </label>
+          <label>
+            X maximum
+            <input value={xAxisMaxLabel} onChange={(event) => setXAxisMaxLabel(event.target.value)} />
+          </label>
+          <label>
+            Y minimum
+            <input value={yAxisMinLabel} onChange={(event) => setYAxisMinLabel(event.target.value)} />
+          </label>
+          <label>
+            Y maximum
+            <input value={yAxisMaxLabel} onChange={(event) => setYAxisMaxLabel(event.target.value)} />
+          </label>
+        </div>
         <div className="dropzone" {...dropzone.getRootProps()}>
           <input {...dropzone.getInputProps()} />
           <UploadCloud size={30} />

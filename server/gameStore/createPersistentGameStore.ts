@@ -1,6 +1,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { calculatePlacement } from "../../shared/domain/calculatePlacement";
 import { clampCoordinate } from "../../shared/domain/clampCoordinate";
+import { getAxisLabels } from "../../shared/domain/axisLabels";
 import { generateRoomSlug } from "../../shared/domain/generateRoomSlug";
 import { shuffle } from "../../shared/domain/shuffle";
 import type { Chart, ChartImage, Coordinate, Game, Player, Vote } from "../../shared/domain/types";
@@ -21,8 +22,10 @@ export const createPersistentGameStore = (db: Firestore): GameStore => {
     const chart: Chart = {
       id: createId("chart"),
       name: input.name,
-      xAxisName: input.xAxisName,
-      yAxisName: input.yAxisName,
+      xAxisMinLabel: input.xAxisMinLabel,
+      xAxisMaxLabel: input.xAxisMaxLabel,
+      yAxisMinLabel: input.yAxisMinLabel,
+      yAxisMaxLabel: input.yAxisMaxLabel,
       status: "published",
       createdBy: "local-admin",
       createdAt: timestamp,
@@ -53,6 +56,7 @@ export const createPersistentGameStore = (db: Firestore): GameStore => {
     const rooms = await gameRepository.listRooms();
     const roomSlug = generateRoomSlug(new Set(rooms.map((room) => room.slug)));
     const images = chart.images.map((image) => ({ ...image }));
+    const axisLabels = getAxisLabels(chart);
     const game: Game = {
       id: createId("game"),
       roomSlug,
@@ -60,8 +64,7 @@ export const createPersistentGameStore = (db: Firestore): GameStore => {
       status: "lobby",
       chartSnapshot: {
         name: chart.name,
-        xAxisName: chart.xAxisName,
-        yAxisName: chart.yAxisName,
+        ...axisLabels,
         images
       },
       imageOrder: shuffle(images.map((image) => image.id)),

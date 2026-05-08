@@ -40,8 +40,14 @@ export const AlignmentBoard = ({ game, image, votes, ownPlayerId, onMove }: Prop
 
   return (
     <section className="board-wrap">
-      <div className="axis-label x">{game.chartSnapshot.xAxisName}</div>
-      <div className="axis-label y">{game.chartSnapshot.yAxisName}</div>
+      <div className="axis-labels x">
+        <span className="axis-label min">{game.chartSnapshot.xAxisMinLabel}</span>
+        <span className="axis-label max">{game.chartSnapshot.xAxisMaxLabel}</span>
+      </div>
+      <div className="axis-labels y">
+        <span className="axis-label min">{game.chartSnapshot.yAxisMinLabel}</span>
+        <span className="axis-label max">{game.chartSnapshot.yAxisMaxLabel}</span>
+      </div>
       <div
         ref={boardRef}
         className="board"

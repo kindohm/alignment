@@ -20,8 +20,10 @@ export type ChartImage = {
 export type Chart = {
   id: string;
   name: string;
-  xAxisName: string;
-  yAxisName: string;
+  xAxisMinLabel: string;
+  xAxisMaxLabel: string;
+  yAxisMinLabel: string;
+  yAxisMaxLabel: string;
   status: ChartStatus;
   createdBy: string;
   createdAt: string;
@@ -33,8 +35,10 @@ export type GameStatus = "lobby" | "round_active" | "round_complete" | "complete
 
 export type ChartSnapshot = {
   name: string;
-  xAxisName: string;
-  yAxisName: string;
+  xAxisMinLabel: string;
+  xAxisMaxLabel: string;
+  yAxisMinLabel: string;
+  yAxisMaxLabel: string;
   images: ChartImage[];
 };
 

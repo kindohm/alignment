@@ -10,6 +10,7 @@ import { loadServerEnv } from "./env/loadServerEnv";
 import { createFirestoreDb } from "./firestore/createFirestoreDb";
 import { createGameStore } from "./gameStore/createGameStore";
 import { createPersistentGameStore } from "./gameStore/createPersistentGameStore";
+import { renderFinalChartPng } from "./render/renderFinalChartPng";
 import { renderFinalChartSvg } from "./render/renderFinalChartSvg";
 import { createObjectStorage } from "./storage/createObjectStorage";
 import { createRoomSocketServer } from "./ws/createRoomSocketServer";
@@ -213,7 +214,32 @@ app.get("/api/rooms/:slug/final.svg", async (request, response) => {
   }
 
   response.setHeader("Content-Type", "image/svg+xml");
+  if (request.query.download === "1") {
+    response.setHeader("Content-Disposition", `attachment; filename="${game.roomSlug}-final-chart.svg"`);
+  }
   response.send(renderFinalChartSvg(game));
+});
+
+app.get("/api/rooms/:slug/final.png", async (request, response) => {
+  const game = await store.getGameBySlug(request.params.slug);
+
+  if (!game) {
+    response.status(404).send("Not found");
+    return;
+  }
+
+  try {
+    const png = await renderFinalChartPng(game);
+    response.setHeader("Content-Type", "image/png");
+
+    if (request.query.download === "1") {
+      response.setHeader("Content-Disposition", `attachment; filename="${game.roomSlug}-final-chart.png"`);
+    }
+
+    response.send(png);
+  } catch (error) {
+    response.status(502).send(error instanceof Error ? error.message : "Unable to render PNG");
+  }
 });
 
 if (process.env.NODE_ENV === "production") {

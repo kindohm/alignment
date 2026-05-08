@@ -32,8 +32,10 @@ export const renderFinalChartSvg = (game: Game): string => {
   <line x1="${padding + plotWidth / 2}" y1="${padding}" x2="${padding + plotWidth / 2}" y2="${height - padding}" stroke="#151515" stroke-width="2" stroke-dasharray="10 12"/>
   <line x1="${padding}" y1="${padding + plotHeight / 2}" x2="${width - padding}" y2="${padding + plotHeight / 2}" stroke="#151515" stroke-width="2" stroke-dasharray="10 12"/>
   <text x="${width / 2}" y="58" text-anchor="middle" font-family="Georgia, serif" font-size="42" font-weight="700" fill="#151515">${escape(game.chartSnapshot.name)}</text>
-  <text x="${width / 2}" y="${height - 36}" text-anchor="middle" font-family="Verdana, sans-serif" font-size="24" fill="#151515">${escape(game.chartSnapshot.xAxisName)}</text>
-  <text x="42" y="${height / 2}" text-anchor="middle" font-family="Verdana, sans-serif" font-size="24" fill="#151515" transform="rotate(-90 42 ${height / 2})">${escape(game.chartSnapshot.yAxisName)}</text>
+  <text x="${padding + plotWidth / 3}" y="${height - 36}" text-anchor="middle" font-family="Verdana, sans-serif" font-size="24" fill="#151515">${escape(game.chartSnapshot.xAxisMinLabel)}</text>
+  <text x="${padding + (plotWidth * 2) / 3}" y="${height - 36}" text-anchor="middle" font-family="Verdana, sans-serif" font-size="24" fill="#151515">${escape(game.chartSnapshot.xAxisMaxLabel)}</text>
+  <text x="42" y="${padding + (plotHeight * 2) / 3}" text-anchor="middle" font-family="Verdana, sans-serif" font-size="24" fill="#151515" transform="rotate(-90 42 ${padding + (plotHeight * 2) / 3})">${escape(game.chartSnapshot.yAxisMinLabel)}</text>
+  <text x="42" y="${padding + plotHeight / 3}" text-anchor="middle" font-family="Verdana, sans-serif" font-size="24" fill="#151515" transform="rotate(-90 42 ${padding + plotHeight / 3})">${escape(game.chartSnapshot.yAxisMaxLabel)}</text>
   ${points}
 </svg>`;
 };

@@ -6,8 +6,10 @@ export const createSeedCharts = (): Chart[] => [
   {
     id: "chart_starter",
     name: "Kitchen Mythology",
-    xAxisName: "Lawful / Chaotic",
-    yAxisName: "Good / Evil",
+    xAxisMinLabel: "Lawful",
+    xAxisMaxLabel: "Chaotic",
+    yAxisMinLabel: "Evil",
+    yAxisMaxLabel: "Good",
     status: "published",
     createdBy: "seed",
     createdAt: now(),

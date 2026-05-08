@@ -6,6 +6,7 @@ import { useAdminGate } from "../../admin/useAdminGate";
 import { requestJson } from "../../api/requestJson";
 import { getStoredPlayer, saveStoredUsername } from "../../player/getStoredPlayer";
 import { AlignmentBoard } from "./AlignmentBoard";
+import { FinalChart } from "./FinalChart";
 
 export const RoomApp = ({ slug }: { slug: string }) => {
   const adminGate = useAdminGate();
@@ -199,18 +200,25 @@ export const RoomApp = ({ slug }: { slug: string }) => {
         ) : null}
       </section>
 
-      <AlignmentBoard
-        game={game}
-        image={currentImage}
-        votes={displayedVotes}
-        ownPlayerId={storedPlayer.id}
-        onMove={sendPlacement}
-      />
+      {game.status !== "complete" ? (
+        <AlignmentBoard
+          game={game}
+          image={currentImage}
+          votes={displayedVotes}
+          ownPlayerId={storedPlayer.id}
+          onMove={sendPlacement}
+        />
+      ) : null}
 
-      {game.status === "complete" && game.finalChartImageUrl ? (
+      {game.status === "complete" ? (
         <section className="panel final-panel">
-          <h2>Final chart</h2>
-          <img src={game.finalChartImageUrl} alt={`${game.chartSnapshot.name} final chart`} />
+          <div className="final-panel-header">
+            <h2>Final chart</h2>
+            <a className="button" href={`/api/rooms/${game.roomSlug}/final.png?download=1`} download={`${game.roomSlug}-final-chart.png`}>
+              Download PNG
+            </a>
+          </div>
+          <FinalChart game={game} />
         </section>
       ) : null}
     </main>

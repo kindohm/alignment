@@ -2,8 +2,10 @@ import type { Chart, ChartImage, Coordinate, Game, Player, RoomSummary } from ".
 
 export type CreateChartInput = {
   name: string;
-  xAxisName: string;
-  yAxisName: string;
+  xAxisMinLabel: string;
+  xAxisMaxLabel: string;
+  yAxisMinLabel: string;
+  yAxisMaxLabel: string;
   images: Array<Pick<ChartImage, "url" | "storageKey" | "filename" | "contentType" | "width" | "height">>;
 };
 
