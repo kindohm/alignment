@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createId } from "../gameStore/createId";
 
 type UploadedObject = {
@@ -9,6 +9,7 @@ type UploadedObject = {
 type ObjectStorage = {
   configured: boolean;
   uploadImage: (file: Express.Multer.File) => Promise<UploadedObject>;
+  deleteObject: (storageKey: string) => Promise<void>;
 };
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
@@ -52,6 +53,9 @@ export const createObjectStorage = (): ObjectStorage => {
       configured,
       uploadImage: async () => {
         throw new Error("S3 storage is not configured");
+      },
+      deleteObject: async () => {
+        throw new Error("S3 storage is not configured");
       }
     };
   }
@@ -92,6 +96,14 @@ export const createObjectStorage = (): ObjectStorage => {
 
   return {
     configured,
-    uploadImage
+    uploadImage,
+    deleteObject: async (storageKey: string): Promise<void> => {
+      await client.send(
+        new DeleteObjectCommand({
+          Bucket: process.env.S3_BUCKET,
+          Key: storageKey
+        })
+      );
+    }
   };
 };

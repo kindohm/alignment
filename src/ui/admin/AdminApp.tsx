@@ -1,4 +1,4 @@
-import { Archive, LogOut, Plus, Rocket, UploadCloud } from "lucide-react";
+import { Archive, LogOut, Plus, Rocket, Trash2, UploadCloud } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { Chart, Game, RoomSummary } from "../../../shared/domain/types";
@@ -147,6 +147,18 @@ export const AdminApp = () => {
     });
     window.location.href = `/rooms/${game.roomSlug}`;
   };
+
+  const deleteChart = async (chart: Chart) => {
+    if (!window.confirm(`Delete "${chart.name}" and all associated rooms/images?`)) {
+      return;
+    }
+
+    await requestJson<void>(`/api/charts/${chart.id}`, {
+      method: "DELETE"
+    });
+    setSelectedChartId("");
+    await load();
+  };
   const isUploading = images.some((image) => image.status === "uploading");
   const hasUploadedImages = images.some((image) => image.status === "done");
 
@@ -251,6 +263,29 @@ export const AdminApp = () => {
         <button className="button primary" disabled={!selectedChartId} onClick={createRoom}>
           Create room
         </button>
+      </section>
+
+      <section className="panel">
+        <div className="panel-title">
+          <Archive size={18} />
+          <h2>Charts</h2>
+        </div>
+        <div className="chart-list">
+          {charts.map((chart) => (
+            <div key={chart.id} className="chart-list-row">
+              <div>
+                <strong>{chart.name}</strong>
+                <span>
+                  {chart.images.length} images / {chart.xAxisMinLabel} to {chart.xAxisMaxLabel} / {chart.yAxisMinLabel} to{" "}
+                  {chart.yAxisMaxLabel}
+                </span>
+              </div>
+              <button className="icon-button danger-icon" title="Delete chart" onClick={() => void deleteChart(chart)}>
+                <Trash2 size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="panel">

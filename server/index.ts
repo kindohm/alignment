@@ -146,6 +146,16 @@ app.post("/api/charts", async (request, response) => {
   response.status(201).json(await store.createChart(request.body));
 });
 
+app.delete("/api/charts/:chartId", async (request, response) => {
+  if (!(await isAdminRequest(request))) {
+    response.status(403).json({ error: "Administrator access required" });
+    return;
+  }
+
+  await store.deleteChart(request.params.chartId);
+  response.status(204).send();
+});
+
 app.get("/api/rooms", async (_request, response) => {
   response.json(await store.listRooms());
 });

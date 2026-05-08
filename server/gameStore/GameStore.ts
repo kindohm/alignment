@@ -12,6 +12,7 @@ export type CreateChartInput = {
 export type GameStore = {
   listCharts: () => Promise<Chart[]>;
   createChart: (input: CreateChartInput) => Promise<Chart>;
+  deleteChart: (chartId: string) => Promise<void>;
   createGame: (chartId: string) => Promise<Game>;
   getGameBySlug: (slug: string) => Promise<Game | undefined>;
   listRooms: () => Promise<RoomSummary[]>;

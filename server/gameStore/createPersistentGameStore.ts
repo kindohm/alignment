@@ -7,6 +7,7 @@ import { shuffle } from "../../shared/domain/shuffle";
 import type { Chart, ChartImage, Coordinate, Game, Player, Vote } from "../../shared/domain/types";
 import { createFirestoreChartRepository } from "../firestore/createFirestoreChartRepository";
 import { createFirestoreGameRepository } from "../firestore/createFirestoreGameRepository";
+import { createObjectStorage } from "../storage/createObjectStorage";
 import type { CreateChartInput, GameStore } from "./GameStore";
 import { createId } from "./createId";
 import { now } from "./now";
@@ -14,6 +15,7 @@ import { now } from "./now";
 export const createPersistentGameStore = (db: Firestore): GameStore => {
   const chartRepository = createFirestoreChartRepository(db);
   const gameRepository = createFirestoreGameRepository(db);
+  const objectStorage = createObjectStorage();
 
   const listCharts = async () => chartRepository.listCharts();
 
@@ -44,6 +46,18 @@ export const createPersistentGameStore = (db: Firestore): GameStore => {
     };
 
     return chartRepository.saveChart(chart);
+  };
+
+  const deleteChart = async (chartId: string): Promise<void> => {
+    const chart = await chartRepository.readChart(chartId);
+    const images = chart?.images ?? [];
+
+    if (objectStorage.configured) {
+      await Promise.all(images.map((image) => objectStorage.deleteObject(image.storageKey)));
+    }
+
+    await gameRepository.deleteGamesBySourceChartId(chartId);
+    await chartRepository.deleteChart(chartId);
   };
 
   const createGame = async (chartId: string): Promise<Game> => {
@@ -246,6 +260,7 @@ export const createPersistentGameStore = (db: Firestore): GameStore => {
   return {
     listCharts,
     createChart,
+    deleteChart,
     createGame,
     getGameBySlug,
     listRooms,

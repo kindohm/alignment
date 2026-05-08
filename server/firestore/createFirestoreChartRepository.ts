@@ -44,9 +44,24 @@ export const createFirestoreChartRepository = (db: Firestore) => {
     return chart;
   };
 
+  const deleteChart = async (chartId: string): Promise<ChartImage[]> => {
+    const chartRef = charts.doc(chartId);
+    const imageSnapshots = await chartRef.collection("images").get();
+    const batch = db.batch();
+
+    imageSnapshots.docs.forEach((snapshot) => {
+      batch.delete(snapshot.ref);
+    });
+    batch.delete(chartRef);
+    await batch.commit();
+
+    return imageSnapshots.docs.map((snapshot) => snapshot.data() as ChartImage);
+  };
+
   return {
     listCharts,
     readChart,
-    saveChart
+    saveChart,
+    deleteChart
   };
 };

@@ -48,6 +48,17 @@ export const createGameStore = (): GameStore => {
     return chart;
   };
 
+  const deleteChart = async (chartId: string): Promise<void> => {
+    charts.delete(chartId);
+
+    [...games.values()]
+      .filter((game) => game.sourceChartId === chartId)
+      .forEach((game) => {
+        games.delete(game.id);
+        slugToGameId.delete(game.roomSlug);
+      });
+  };
+
   const getGameBySlug = async (slug: string): Promise<Game | undefined> => {
     const gameId = slugToGameId.get(slug);
     return gameId ? games.get(gameId) : undefined;
@@ -266,6 +277,7 @@ export const createGameStore = (): GameStore => {
   return {
     listCharts,
     createChart,
+    deleteChart,
     createGame,
     getGameBySlug,
     listRooms,

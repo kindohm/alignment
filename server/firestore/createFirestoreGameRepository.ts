@@ -50,10 +50,24 @@ export const createFirestoreGameRepository = (db: Firestore) => {
     });
   };
 
+  const deleteGamesBySourceChartId = async (sourceChartId: string): Promise<void> => {
+    const snapshots = await games.where("sourceChartId", "==", sourceChartId).get();
+    const batch = db.batch();
+
+    snapshots.docs.forEach((snapshot) => {
+      const game = snapshot.data() as Game;
+      batch.delete(snapshot.ref);
+      batch.delete(roomSlugs.doc(game.roomSlug));
+    });
+
+    await batch.commit();
+  };
+
   return {
     saveGame,
     readGame,
     readGameBySlug,
-    listRooms
+    listRooms,
+    deleteGamesBySourceChartId
   };
 };
