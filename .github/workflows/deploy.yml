@@ -99,9 +99,12 @@ jobs:
           ln -sfn "$DEPLOY_PATH/shared/.env" "$DEPLOY_PATH/releases/$RELEASE_NAME/.env"
           ln -sfn "$DEPLOY_PATH/releases/$RELEASE_NAME" "$DEPLOY_PATH/current"
 
+
           if [ -n "$DEPLOY_SERVICE_NAME" ]; then
             sudo systemctl restart "$DEPLOY_SERVICE_NAME"
           fi
+
+
 
 
           REMOTE
