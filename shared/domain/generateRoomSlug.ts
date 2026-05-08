@@ -12,7 +12,14 @@ const adjectives = [
   "neon",
   "silver",
   "velvet",
-  "vivid"
+  "vivid",
+  "weird",
+  "gelatinous",
+  "pleasant",
+  "eager",
+  "citrus",
+  "happy",
+  "opaque",
 ];
 
 const nouns = [
@@ -27,10 +34,20 @@ const nouns = [
   "signal",
   "studio",
   "summit",
-  "vessel"
+  "vessel",
+  "bird",
+  "planet",
+  "smudge",
+  "movie",
+  "birthright",
+  "spa",
+  "town",
 ];
 
-export const generateRoomSlug = (used: Set<string>, random = Math.random): string => {
+export const generateRoomSlug = (
+  used: Set<string>,
+  random = Math.random,
+): string => {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const adjective = adjectives[Math.floor(random() * adjectives.length)];
     const noun = nouns[Math.floor(random() * nouns.length)];
