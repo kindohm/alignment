@@ -1,0 +1,3 @@
+- use the "caveman" skill
+- use the "mike style" skill when writing code, or when thinking about design and architecture
+- use the "frontend design" skill when doing UI work

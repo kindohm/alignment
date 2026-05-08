@@ -1,0 +1,103 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "24"
+  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/alignment/app' }}
+  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+  DEPLOY_SERVICE_NAME: ${{ secrets.DEPLOY_SERVICE_NAME || '' }}
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Prepare deployment bundle
+        run: |
+          mkdir -p .deploy/alignment/src/assets
+          rsync -a package.json package-lock.json .deploy/alignment/
+          rsync -a dist server shared .deploy/alignment/
+          rsync -a src/assets/seed .deploy/alignment/src/assets/
+
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS || '' }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_SSH_KEY"
+          test -n "$DEPLOY_USER"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$DEPLOY_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          fi
+
+      - name: Upload release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          RELEASE_NAME: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$DEPLOY_PATH/releases/$RELEASE_NAME'"
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -p $DEPLOY_PORT" .deploy/alignment/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/releases/$RELEASE_NAME/"
+
+      - name: Activate release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          RELEASE_NAME: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash -s" -- "$DEPLOY_PATH" "$RELEASE_NAME" "$DEPLOY_SERVICE_NAME" <<'REMOTE'
+          set -euo pipefail
+
+          DEPLOY_PATH="$1"
+          RELEASE_NAME="$2"
+          DEPLOY_SERVICE_NAME="$3"
+
+          cd "$DEPLOY_PATH/releases/$RELEASE_NAME"
+          npm ci --omit=dev
+
+          ln -sfn "$DEPLOY_PATH/releases/$RELEASE_NAME" "$DEPLOY_PATH/current"
+
+          if [ -n "$DEPLOY_SERVICE_NAME" ]; then
+            sudo systemctl restart "$DEPLOY_SERVICE_NAME"
+          fi
+          REMOTE
