@@ -25,15 +25,17 @@ const firestoreDb = createFirestoreDb();
 const store = firestoreDb ? createPersistentGameStore(firestoreDb) : createGameStore();
 const adminAccess = createAdminAccess(firestoreDb);
 const objectStorage = createObjectStorage();
+const maxUploadSizeMb = Number(process.env.MAX_UPLOAD_SIZE_MB ?? 50);
+const maxUploadSizeBytes = maxUploadSizeMb * 1024 * 1024;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 15 * 1024 * 1024,
+    fileSize: maxUploadSizeBytes,
     files: 1
   }
 });
 
-app.use(express.json({ limit: "25mb" }));
+app.use(express.json({ limit: `${maxUploadSizeMb}mb` }));
 app.use("/seed", express.static(path.join(__dirname, "../src/assets/seed")));
 
 const isAdminRequest = async (request: express.Request): Promise<boolean> => {
