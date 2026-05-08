@@ -2,16 +2,21 @@ import { Clipboard, Home, LogIn, Play, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canEditUsername } from "../../../shared/domain/canEditUsername";
 import type { Game, Vote } from "../../../shared/domain/types";
+import { useAdminGate } from "../../admin/useAdminGate";
 import { requestJson } from "../../api/requestJson";
 import { getStoredPlayer, saveStoredUsername } from "../../player/getStoredPlayer";
 import { AlignmentBoard } from "./AlignmentBoard";
 
 export const RoomApp = ({ slug }: { slug: string }) => {
+  const adminGate = useAdminGate();
   const storedPlayer = useMemo(() => getStoredPlayer(), []);
   const [game, setGame] = useState<Game | null>(null);
   const [username, setUsername] = useState(storedPlayer.username);
   const [liveVotes, setLiveVotes] = useState<Vote[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
+  const lastPlacementSentAtRef = useRef(0);
+  const pendingPlacementRef = useRef<{ x: number; y: number } | null>(null);
+  const placementSendTimeoutRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     setGame(await requestJson<Game>(`/api/rooms/${slug}`));
@@ -52,11 +57,19 @@ export const RoomApp = ({ slug }: { slug: string }) => {
 
       if (message.type === "placement_moved") {
         const vote = message.payload as Vote;
+
+        if (vote.playerId === storedPlayer.id) {
+          return;
+        }
+
         setLiveVotes((current) => [...current.filter((item) => item.playerId !== vote.playerId), vote]);
       }
     });
 
     return () => {
+      if (placementSendTimeoutRef.current) {
+        window.clearTimeout(placementSendTimeoutRef.current);
+      }
       socket.close();
       socketRef.current = null;
     };
@@ -66,8 +79,42 @@ export const RoomApp = ({ slug }: { slug: string }) => {
   const currentImage = game?.chartSnapshot.images.find((image) => image.id === game.currentImageId);
   const displayedVotes = game?.status === "round_active" ? liveVotes : currentRound?.votes ?? [];
 
+  const flushPlacement = () => {
+    const placement = pendingPlacementRef.current;
+
+    if (!placement || socketRef.current?.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    pendingPlacementRef.current = null;
+    lastPlacementSentAtRef.current = performance.now();
+    socketRef.current.send(JSON.stringify({ type: "placement_moved", payload: placement }));
+  };
+
   const sendPlacement = (x: number, y: number) => {
-    socketRef.current?.send(JSON.stringify({ type: "placement_moved", payload: { x, y } }));
+    setLiveVotes((current) => [
+      ...current.filter((vote) => vote.playerId !== storedPlayer.id),
+      {
+        playerId: storedPlayer.id,
+        username: username || "Player",
+        x,
+        y,
+        updatedAt: new Date().toISOString()
+      }
+    ]);
+
+    pendingPlacementRef.current = { x, y };
+
+    if (performance.now() - lastPlacementSentAtRef.current > 80) {
+      flushPlacement();
+      return;
+    }
+
+    if (placementSendTimeoutRef.current) {
+      window.clearTimeout(placementSendTimeoutRef.current);
+    }
+
+    placementSendTimeoutRef.current = window.setTimeout(flushPlacement, 80);
   };
 
   const rename = async () => {
@@ -134,14 +181,22 @@ export const RoomApp = ({ slug }: { slug: string }) => {
           <LogIn size={16} />
           Save
         </button>
-        <button className="button primary" disabled={game.status === "round_active" || game.status === "complete"} onClick={startRound}>
-          <Play size={16} />
-          Start round
-        </button>
-        <button className="button danger" disabled={game.status !== "round_active"} onClick={endRound}>
-          <Square size={16} />
-          End round
-        </button>
+        {adminGate.isAdmin ? (
+          <>
+            <button
+              className="button primary"
+              disabled={game.status === "round_active" || game.status === "complete"}
+              onClick={startRound}
+            >
+              <Play size={16} />
+              Start round
+            </button>
+            <button className="button danger" disabled={game.status !== "round_active"} onClick={endRound}>
+              <Square size={16} />
+              End round
+            </button>
+          </>
+        ) : null}
       </section>
 
       <AlignmentBoard

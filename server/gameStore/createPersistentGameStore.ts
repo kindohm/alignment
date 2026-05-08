@@ -1,21 +1,20 @@
+import type { Firestore } from "firebase-admin/firestore";
 import { calculatePlacement } from "../../shared/domain/calculatePlacement";
 import { clampCoordinate } from "../../shared/domain/clampCoordinate";
 import { generateRoomSlug } from "../../shared/domain/generateRoomSlug";
 import { shuffle } from "../../shared/domain/shuffle";
-import type { Chart, ChartImage, Coordinate, Game, Player, RoomSummary, Vote } from "../../shared/domain/types";
+import type { Chart, ChartImage, Coordinate, Game, Player, Vote } from "../../shared/domain/types";
+import { createFirestoreChartRepository } from "../firestore/createFirestoreChartRepository";
+import { createFirestoreGameRepository } from "../firestore/createFirestoreGameRepository";
 import type { CreateChartInput, GameStore } from "./GameStore";
 import { createId } from "./createId";
-import { createSeedCharts } from "./createSeedCharts";
 import { now } from "./now";
 
-export const createGameStore = (): GameStore => {
-  const charts = new Map<string, Chart>();
-  const games = new Map<string, Game>();
-  const slugToGameId = new Map<string, string>();
+export const createPersistentGameStore = (db: Firestore): GameStore => {
+  const chartRepository = createFirestoreChartRepository(db);
+  const gameRepository = createFirestoreGameRepository(db);
 
-  createSeedCharts().forEach((chart) => charts.set(chart.id, chart));
-
-  const listCharts = async (): Promise<Chart[]> => [...charts.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const listCharts = async () => chartRepository.listCharts();
 
   const createChart = async (input: CreateChartInput): Promise<Chart> => {
     const timestamp = now();
@@ -28,7 +27,7 @@ export const createGameStore = (): GameStore => {
       createdBy: "local-admin",
       createdAt: timestamp,
       updatedAt: timestamp,
-      images: input.images.map((image, order) => ({
+      images: input.images.map((image, order): ChartImage => ({
         id: createId("img"),
         storageKey: image.storageKey,
         url: image.url,
@@ -41,32 +40,18 @@ export const createGameStore = (): GameStore => {
       }))
     };
 
-    charts.set(chart.id, chart);
-    return chart;
+    return chartRepository.saveChart(chart);
   };
-
-  const getGameBySlug = async (slug: string): Promise<Game | undefined> => {
-    const gameId = slugToGameId.get(slug);
-    return gameId ? games.get(gameId) : undefined;
-  };
-
-  const listRooms = async (): Promise<RoomSummary[]> =>
-    [...games.values()].map((game) => ({
-      slug: game.roomSlug,
-      gameId: game.id,
-      chartName: game.chartSnapshot.name,
-      status: game.status,
-      playerCount: game.players.length
-    }));
 
   const createGame = async (chartId: string): Promise<Game> => {
-    const chart = charts.get(chartId);
+    const chart = await chartRepository.readChart(chartId);
 
     if (!chart) {
       throw new Error("Chart not found");
     }
 
-    const roomSlug = generateRoomSlug(new Set(slugToGameId.keys()));
+    const rooms = await gameRepository.listRooms();
+    const roomSlug = generateRoomSlug(new Set(rooms.map((room) => room.slug)));
     const images = chart.images.map((image) => ({ ...image }));
     const game: Game = {
       id: createId("game"),
@@ -88,18 +73,25 @@ export const createGameStore = (): GameStore => {
       createdAt: now()
     };
 
-    games.set(game.id, game);
-    slugToGameId.set(roomSlug, game.id);
-    return game;
+    return gameRepository.saveGame(game);
   };
 
-  const joinGame = async (slug: string, player: Pick<Player, "id" | "username">): Promise<Game> => {
+  const getGameBySlug = async (slug: string) => gameRepository.readGameBySlug(slug);
+
+  const listRooms = async () => gameRepository.listRooms();
+
+  const loadGame = async (slug: string): Promise<Game> => {
     const game = await getGameBySlug(slug);
 
     if (!game) {
       throw new Error("Room not found");
     }
 
+    return game;
+  };
+
+  const joinGame = async (slug: string, player: Pick<Player, "id" | "username">): Promise<Game> => {
+    const game = await loadGame(slug);
     const existing = game.players.find((item) => item.id === player.id);
     const timestamp = now();
 
@@ -108,25 +100,20 @@ export const createGameStore = (): GameStore => {
       if (game.status !== "round_active") {
         existing.username = player.username;
       }
-      return game;
+    } else {
+      game.players.push({
+        id: player.id,
+        username: player.username,
+        joinedAt: timestamp,
+        lastSeenAt: timestamp
+      });
     }
 
-    game.players.push({
-      id: player.id,
-      username: player.username,
-      joinedAt: timestamp,
-      lastSeenAt: timestamp
-    });
-
-    return game;
+    return gameRepository.saveGame(game);
   };
 
   const renamePlayer = async (slug: string, playerId: string, username: string): Promise<Game> => {
-    const game = await getGameBySlug(slug);
-
-    if (!game) {
-      throw new Error("Room not found");
-    }
+    const game = await loadGame(slug);
 
     if (game.status === "round_active") {
       throw new Error("Cannot rename during active round");
@@ -139,7 +126,7 @@ export const createGameStore = (): GameStore => {
       player.lastSeenAt = now();
     }
 
-    return game;
+    return gameRepository.saveGame(game);
   };
 
   const leaveGame = async (slug: string, playerId: string): Promise<Game | undefined> => {
@@ -150,15 +137,11 @@ export const createGameStore = (): GameStore => {
     }
 
     game.players = game.players.filter((player) => player.id !== playerId);
-    return game;
+    return gameRepository.saveGame(game);
   };
 
   const startNextRound = async (slug: string): Promise<Game> => {
-    const game = await getGameBySlug(slug);
-
-    if (!game) {
-      throw new Error("Room not found");
-    }
+    const game = await loadGame(slug);
 
     if (game.status === "round_active") {
       throw new Error("Round already active");
@@ -170,7 +153,7 @@ export const createGameStore = (): GameStore => {
     if (!imageId) {
       game.status = "complete";
       game.completedAt = now();
-      return game;
+      return gameRepository.saveGame(game);
     }
 
     const round = {
@@ -187,7 +170,7 @@ export const createGameStore = (): GameStore => {
     game.currentImageId = imageId;
     game.status = "round_active";
     game.rounds.push(round);
-    return game;
+    return gameRepository.saveGame(game);
   };
 
   const upsertVote = async (slug: string, playerId: string, coordinate: Coordinate): Promise<Game> => {
@@ -210,7 +193,6 @@ export const createGameStore = (): GameStore => {
       ...clampCoordinate(coordinate),
       updatedAt: now()
     };
-
     const existingIndex = round.votes.findIndex((vote) => vote.playerId === playerId);
 
     if (existingIndex >= 0) {
@@ -219,7 +201,7 @@ export const createGameStore = (): GameStore => {
       round.votes.push(nextVote);
     }
 
-    return game;
+    return gameRepository.saveGame(game);
   };
 
   const endRound = async (slug: string): Promise<Game> => {
@@ -241,14 +223,12 @@ export const createGameStore = (): GameStore => {
     round.status = "complete";
     round.endedAt = timestamp;
     round.result = result;
-
     game.results.push({
       imageId: game.currentImageId,
       roundId: round.id,
       ...result,
       completedAt: timestamp
     });
-
     game.status = game.currentRoundIndex >= game.imageOrder.length - 1 ? "complete" : "round_complete";
 
     if (game.status === "complete") {
@@ -257,7 +237,7 @@ export const createGameStore = (): GameStore => {
       game.finalChartStorageKey = `generated/${game.roomSlug}/final.svg`;
     }
 
-    return game;
+    return gameRepository.saveGame(game);
   };
 
   return {

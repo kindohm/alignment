@@ -1,4 +1,4 @@
-import { Archive, Plus, Rocket, UploadCloud } from "lucide-react";
+import { Archive, LogOut, Plus, Rocket, UploadCloud } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import type { Chart, Game, RoomSummary } from "../../../shared/domain/types";
@@ -6,9 +6,13 @@ import { useAdminGate } from "../../admin/useAdminGate";
 import { requestJson } from "../../api/requestJson";
 
 type DraftImage = {
+  id: string;
   url: string;
+  storageKey: string;
   filename: string;
   contentType: string;
+  status: "uploading" | "done" | "error";
+  error?: string;
 };
 
 export const AdminApp = () => {
@@ -39,20 +43,65 @@ export const AdminApp = () => {
 
   const onDrop = useCallback((files: File[]) => {
     files.forEach((file) => {
-      const reader = new FileReader();
+      const draftId = crypto.randomUUID();
+      const previewUrl = URL.createObjectURL(file);
+      setImages((current) => [
+        ...current,
+        {
+          id: draftId,
+          url: previewUrl,
+          storageKey: "",
+          filename: file.name,
+          contentType: file.type || "application/octet-stream",
+          status: "uploading"
+        }
+      ]);
 
-      reader.addEventListener("load", () => {
-        setImages((current) => [
-          ...current,
-          {
-            url: String(reader.result),
-            filename: file.name,
-            contentType: file.type || "application/octet-stream"
+      const upload = async () => {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        try {
+          const response = await fetch("/api/uploads/images", {
+            method: "POST",
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error(await response.text());
           }
-        ]);
-      });
 
-      reader.readAsDataURL(file);
+          const uploaded = (await response.json()) as Omit<DraftImage, "id" | "status">;
+          setImages((current) =>
+            current.map((image) =>
+              image.id === draftId
+                ? {
+                    ...image,
+                    url: uploaded.url,
+                    storageKey: uploaded.storageKey,
+                    filename: uploaded.filename,
+                    contentType: uploaded.contentType,
+                    status: "done"
+                  }
+                : image
+            )
+          );
+        } catch (error) {
+          setImages((current) =>
+            current.map((image) =>
+              image.id === draftId
+                ? {
+                    ...image,
+                    status: "error",
+                    error: error instanceof Error ? error.message : "Upload failed"
+                  }
+                : image
+            )
+          );
+        }
+      };
+
+      void upload();
     });
   }, []);
 
@@ -64,13 +113,22 @@ export const AdminApp = () => {
   });
 
   const createChart = async () => {
+    const uploadedImages = images
+      .filter((image) => image.status === "done")
+      .map((image) => ({
+        url: image.url,
+        storageKey: image.storageKey,
+        filename: image.filename,
+        contentType: image.contentType
+      }));
+
     await requestJson<Chart>("/api/charts", {
       method: "POST",
       body: JSON.stringify({
         name,
         xAxisName,
         yAxisName,
-        images
+        images: uploadedImages
       })
     });
     setName("");
@@ -85,6 +143,8 @@ export const AdminApp = () => {
     });
     window.location.href = `/rooms/${game.roomSlug}`;
   };
+  const isUploading = images.some((image) => image.status === "uploading");
+  const hasUploadedImages = images.some((image) => image.status === "done");
 
   if (!adminGate.ready) {
     return <main className="shell">Checking admin access...</main>;
@@ -116,6 +176,12 @@ export const AdminApp = () => {
           Build reusable templates, launch one-off rooms, let results harden into history.
           {adminGate.localMode ? " Local dev admin mode active." : ` Signed in as ${adminGate.email ?? "admin"}.`}
         </p>
+        {!adminGate.localMode ? (
+          <button className="button admin-signout" onClick={() => void adminGate.signOut()}>
+            <LogOut size={16} />
+            Sign out
+          </button>
+        ) : null}
       </section>
 
       <section className="panel form-panel">
@@ -142,11 +208,17 @@ export const AdminApp = () => {
         </div>
         <div className="image-strip">
           {images.map((image) => (
-            <img key={image.url} src={image.url} alt="" />
+            <figure key={image.id} className={`upload-tile ${image.status}`}>
+              <img src={image.url} alt="" />
+              <figcaption>
+                <strong>{image.status}</strong>
+                <span>{image.filename}</span>
+              </figcaption>
+            </figure>
           ))}
         </div>
-        <button className="button primary" disabled={!name || images.length === 0} onClick={createChart}>
-          Save chart
+        <button className="button primary" disabled={!name || !hasUploadedImages || isUploading} onClick={createChart}>
+          {isUploading ? "Uploading..." : "Save chart"}
         </button>
       </section>
 

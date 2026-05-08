@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
-import type { GameStore } from "../gameStore/createGameStore";
+import type { GameStore } from "../gameStore/GameStore";
 
 type Client = {
   socket: WebSocket;
@@ -51,7 +51,7 @@ export const createRoomSocketServer = (server: Server, store: GameStore) => {
     const client: Client = { socket };
     clients.add(client);
 
-    socket.on("message", (raw) => {
+    socket.on("message", async (raw) => {
       const message = JSON.parse(raw.toString()) as {
         type: string;
         payload: Record<string, unknown>;
@@ -61,11 +61,18 @@ export const createRoomSocketServer = (server: Server, store: GameStore) => {
         const slug = String(message.payload.slug);
         const playerId = String(message.payload.playerId);
         const username = String(message.payload.username);
-        client.slug = slug;
-        client.playerId = playerId;
-        addPlayerConnection(slug, playerId);
-        const game = store.joinGame(slug, { id: playerId, username });
-        broadcast(slug, "game_updated", game);
+
+        try {
+          const game = await store.joinGame(slug, { id: playerId, username });
+          client.slug = slug;
+          client.playerId = playerId;
+          addPlayerConnection(slug, playerId);
+          broadcast(slug, "game_updated", game);
+        } catch (error) {
+          send(client.socket, "join_rejected", {
+            reason: error instanceof Error ? error.message : "Room not found"
+          });
+        }
       }
 
       if (message.type === "placement_moved" && client.slug && client.playerId) {
@@ -73,7 +80,7 @@ export const createRoomSocketServer = (server: Server, store: GameStore) => {
         const y = Number(message.payload.y);
 
         try {
-          const game = store.upsertVote(client.slug, client.playerId, { x, y });
+          const game = await store.upsertVote(client.slug, client.playerId, { x, y });
           broadcast(client.slug, "placement_moved", {
             playerId: client.playerId,
             x,
@@ -88,12 +95,13 @@ export const createRoomSocketServer = (server: Server, store: GameStore) => {
       }
     });
 
-    socket.on("close", () => {
+    socket.on("close", async () => {
       clients.delete(client);
 
       if (client.slug && client.playerId) {
         const activeConnections = removePlayerConnection(client.slug, client.playerId);
-        const game = activeConnections === 0 ? store.leaveGame(client.slug, client.playerId) : store.getGameBySlug(client.slug);
+        const game =
+          activeConnections === 0 ? await store.leaveGame(client.slug, client.playerId) : await store.getGameBySlug(client.slug);
         broadcast(client.slug, "game_updated", game);
       }
     });

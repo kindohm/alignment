@@ -191,6 +191,10 @@ a {
   font-size: 19px;
 }
 
+.admin-signout {
+  margin-top: 10px;
+}
+
 .panel-title {
   display: flex;
   gap: 10px;
@@ -241,12 +245,53 @@ select {
   margin-bottom: 18px;
 }
 
-.image-strip img {
+.upload-tile {
+  position: relative;
+  margin: 0;
+}
+
+.upload-tile img {
   width: 100%;
   aspect-ratio: 1;
   object-fit: contain;
   border: 3px solid var(--line);
   background: white;
+}
+
+.upload-tile.uploading img {
+  opacity: 0.45;
+  filter: saturate(0.7);
+}
+
+.upload-tile.error img {
+  border-color: var(--red);
+  opacity: 0.55;
+}
+
+.upload-tile figcaption {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.05;
+}
+
+.upload-tile figcaption strong {
+  text-transform: uppercase;
+}
+
+.upload-tile.done figcaption strong {
+  color: var(--green);
+}
+
+.upload-tile.error figcaption strong {
+  color: var(--red);
+}
+
+.upload-tile figcaption span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .room-list {

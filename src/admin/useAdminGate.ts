@@ -10,6 +10,7 @@ type AdminSession = {
 type AdminGate = AdminSession & {
   ready: boolean;
   signIn: () => void;
+  signOut: () => Promise<void>;
 };
 
 export const useAdminGate = (): AdminGate => {
@@ -29,9 +30,20 @@ export const useAdminGate = (): AdminGate => {
     window.location.href = "/api/admin/login/google";
   }, []);
 
+  const signOut = useCallback(async () => {
+    await requestJson<void>("/api/admin/logout", {
+      method: "POST"
+    });
+    setSession({
+      localMode: false,
+      isAdmin: false
+    });
+  }, []);
+
   return {
     ...session,
     ready,
-    signIn
+    signIn,
+    signOut
   };
 };
