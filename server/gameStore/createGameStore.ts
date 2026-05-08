@@ -1,6 +1,7 @@
 import { calculatePlacement } from "../../shared/domain/calculatePlacement";
 import { clampCoordinate } from "../../shared/domain/clampCoordinate";
 import { getAxisLabels } from "../../shared/domain/axisLabels";
+import { calculateWhimsyStats } from "../../shared/domain/calculateWhimsyStats";
 import { generateRoomSlug } from "../../shared/domain/generateRoomSlug";
 import { shuffle } from "../../shared/domain/shuffle";
 import type { Chart, ChartImage, Coordinate, Game, Player, RoomSummary, Vote } from "../../shared/domain/types";
@@ -267,6 +268,7 @@ export const createGameStore = (): GameStore => {
 
     if (game.status === "complete") {
       game.completedAt = timestamp;
+      game.whimsyStats = calculateWhimsyStats(game.rounds);
       game.finalChartImageUrl = `/api/rooms/${game.roomSlug}/final.svg`;
       game.finalChartStorageKey = `generated/${game.roomSlug}/final.svg`;
     }

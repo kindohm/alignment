@@ -603,8 +603,8 @@ select {
 
 .final-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
   min-height: 0;
   overflow: hidden;
   padding: 14px;
@@ -625,6 +625,80 @@ select {
 .final-panel-header .button {
   min-height: 36px;
   padding: 0 12px;
+}
+
+.whimsy-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.whimsy-stat {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border: 3px solid var(--line);
+  background: white;
+  padding: 10px;
+  box-shadow: 4px 4px 0 var(--line);
+}
+
+.whimsy-stat svg {
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--line);
+  background: var(--paper);
+  padding: 6px;
+}
+
+.whimsy-stat div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.whimsy-stat span,
+.whimsy-stat small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.whimsy-stat span {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.whimsy-stat strong {
+  overflow: hidden;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 22px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.whimsy-stat small {
+  opacity: 0.72;
+  font-weight: 800;
+}
+
+.whimsy-stat.different svg {
+  background: var(--red);
+  color: white;
+}
+
+.whimsy-stat.similar svg {
+  background: var(--green);
+  color: white;
+}
+
+.whimsy-stat.extreme svg {
+  background: var(--yellow);
 }
 
 .final-chart {
@@ -729,5 +803,15 @@ select {
 
   .board {
     min-height: 0;
+  }
+
+  .room-shell {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .whimsy-stats {
+    grid-template-columns: 1fr;
   }
 }

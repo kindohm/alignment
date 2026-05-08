@@ -72,6 +72,29 @@ export type GameResult = Coordinate & {
   completedAt: string;
 };
 
+export type WhimsyPlayerDistanceStat = {
+  playerId: string;
+  username: string;
+  voteCount: number;
+  comparisonCount: number;
+  averageDistance: number;
+};
+
+export type WhimsyExtremeVoteStat = Coordinate & {
+  playerId: string;
+  username: string;
+  voteCount: number;
+  roundId: string;
+  imageId: string;
+  distanceFromCenter: number;
+};
+
+export type GameWhimsyStats = {
+  mostDifferent?: WhimsyPlayerDistanceStat;
+  mostSimilar?: WhimsyPlayerDistanceStat;
+  mostExtreme?: WhimsyExtremeVoteStat;
+};
+
 export type Game = {
   id: string;
   roomSlug: string;
@@ -85,6 +108,7 @@ export type Game = {
   players: Player[];
   rounds: Round[];
   results: GameResult[];
+  whimsyStats?: GameWhimsyStats;
   finalChartImageUrl?: string;
   finalChartStorageKey?: string;
   createdBy: string;

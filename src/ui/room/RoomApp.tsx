@@ -7,6 +7,7 @@ import { requestJson } from "../../api/requestJson";
 import { getStoredPlayer, saveStoredUsername } from "../../player/getStoredPlayer";
 import { AlignmentBoard } from "./AlignmentBoard";
 import { FinalChart } from "./FinalChart";
+import { FinalWhimsyStats } from "./FinalWhimsyStats";
 
 export const RoomApp = ({ slug }: { slug: string }) => {
   const adminGate = useAdminGate();
@@ -218,6 +219,7 @@ export const RoomApp = ({ slug }: { slug: string }) => {
               Download PNG
             </a>
           </div>
+          <FinalWhimsyStats game={game} />
           <FinalChart game={game} />
         </section>
       ) : null}
