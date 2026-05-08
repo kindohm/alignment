@@ -54,7 +54,15 @@ export const RoomApp = ({ slug }: { slug: string }) => {
       const message = JSON.parse(event.data) as { type: string; payload: Game | Vote };
 
       if (message.type === "game_updated") {
-        setGame(message.payload as Game);
+        const nextGame = message.payload as Game;
+
+        setGame((currentGame) => {
+          if (currentGame?.currentRoundId !== nextGame.currentRoundId) {
+            setLiveVotes([]);
+          }
+
+          return nextGame;
+        });
       }
 
       if (message.type === "placement_moved") {
